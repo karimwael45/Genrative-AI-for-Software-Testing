@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Web Testing Assistant</title>
+  <script src="/web/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <h1>Web Testing Assistant</h1>
+    <form id="inspect">
+      <label>Page URL <input id="url" type="url" required></label>
+      <button>Inspect page</button>
+      <button id="sample" type="button">Load sample</button>
+    </form>
+    <p id="status" role="status"></p>
+    <form id="assist">
+      <fieldset>
+        <legend id="source">Inspected elements</legend>
+        <div id="elements"></div>
+      </fieldset>
+      <p><label>Testing goal <input id="goal" required></label></p>
+      <button id="suggest" disabled>Suggest next step</button>
+    </form>
+    <pre id="result" aria-live="polite"></pre>
+  </main>
+</body>
+</html>

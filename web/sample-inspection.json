@@ -1,0 +1,21 @@
+{
+  "inspectionId": "sample",
+  "sourceUrl": "http://localhost:8000/login",
+  "inspectionTimeMs": null,
+  "elements": [
+    {
+      "id": "el-1",
+      "role": "textbox",
+      "label": "Email",
+      "attributes": {"id": "email", "type": "email"},
+      "candidateLocators": [{"strategy": "label", "value": "Email", "matchCount": null}]
+    },
+    {
+      "id": "el-2",
+      "role": "button",
+      "label": "Sign in",
+      "attributes": {"type": "submit"},
+      "candidateLocators": [{"strategy": "role", "value": "button", "name": "Sign in", "matchCount": null}]
+    }
+  ]
+}
