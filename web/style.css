@@ -1,0 +1,4 @@
+body { font-family: system-ui, sans-serif; margin: 2rem auto; padding: 0 1rem; max-width: 60rem; }
+input, button { font: inherit; padding: .4rem; }
+fieldset { margin-top: 1rem; }
+pre { white-space: pre-wrap; overflow-wrap: anywhere; }

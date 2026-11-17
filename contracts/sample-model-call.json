@@ -1,0 +1,17 @@
+{
+  "request": {
+    "inspectionId": "sample",
+    "elementIds": [
+      "el-1"
+    ],
+    "goal": "Check the email field"
+  },
+  "response": {
+    "message": "Observed el-1 is an email field. Clarify the expected validation behavior.",
+    "model": "synthetic-example",
+    "inputTokens": null,
+    "outputTokens": null,
+    "responseTimeMs": 0,
+    "tokenCountsEstimated": false
+  }
+}

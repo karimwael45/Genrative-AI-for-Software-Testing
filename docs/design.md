@@ -3,9 +3,9 @@
 ```mermaid
 flowchart LR
   Tester --> UI["Web UI"]
-  UI <--> API["Flask API"]
+  UI <--> API["FastAPI API"]
   API <--> Runner["Restricted Playwright runner"]
-  API <--> Store["Inspection snapshots"]
+  API <--> Store["SQLite snapshots"]
   API <--> Model["Model adapter"]
 ```
 
@@ -38,3 +38,7 @@ cases and code so the tester can review diffs and restore earlier versions.
   process is the planned interface. Configure actual restrictions for the demo.
 - Describe the checks you implemented for URL scope, returned element IDs,
   locator uniqueness, and model output grounding.
+
+## Current starter boundaries
+
+See README.md for implementation status. Modules now follow the proposed runner/app/model split. Initial-origin validation, runner timeout, stored-ID selection and inspection persistence are wired; live browsing, redirect restrictions, provider calls, usage logs, version writes and output grounding remain unfinished.
