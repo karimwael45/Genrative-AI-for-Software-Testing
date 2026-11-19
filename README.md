@@ -49,11 +49,8 @@ Run checks with `python -m unittest discover -s tests`. Worker protocol: `python
 Providers (choose in `config/settings.yaml` → `model.provider`): `groq` (free tier, default), `gemini` (free tier), `ollama` (local, no key), `mock` (offline, tests only, never evidence). `fallback_provider` is tried if the main one fails.
 
 1. Copy `.env.example` to `.env` and paste your free API key (e.g. `GROQ_API_KEY=...` from console.groq.com). `.env` is git-ignored.
-2. For Ollama instead: install Ollama, run `ollama pull llama3.2:3b`, set `provider: ollama`.
+2. For Ollama instead: install Ollama, run `ollama pull llama3.2:3b`, set `provider: ollama`, it is "null" for this phase.
 3. Check the setup without the UI or browser: `python -m model.cli --goal "Check invalid email handling" --ids el-1 el-2`
 4. Save evidence from a real inspection: `python -m model.cli --inspection evidence/inspection_output.json --goal "..." --ids <ids> --save evidence/model_usage_log.json`
 
-What the model layer guarantees:
-- Only the goal and the selected stored elements are sent. Page strings are truncated (`max_field_chars`) and wrapped in an `<observed_page_data>` block that the system prompt marks as untrusted data (prompt-injection guard).
-- Replies are JSON: summary, observations, nextAction, clarification, assumptions. Any element ID the model cites that was not selected is flagged in `grounding.unknownElementIds` and shown as a warning.
-- Only the HTTP model call is timed (separate from browser time). Provider token counts are used when returned; otherwise counts are estimated and `tokenCountsEstimated` is true. Repeated identical requests are served from a small cache and marked `cached: true`.
+
