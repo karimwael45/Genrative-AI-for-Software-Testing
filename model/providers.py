@@ -70,7 +70,11 @@ def _post_json(url: str, payload: dict, headers: dict, timeout: float) -> tuple[
     """POST JSON and return (response_json, elapsed_ms) for the HTTP call only."""
     request = urllib.request.Request(
         url, data=json.dumps(payload).encode("utf-8"),
-        headers={"Content-Type": "application/json", **headers}, method="POST",
+        headers={"Content-Type": "application/json", "Accept": "application/json",
+                 # Some providers sit behind Cloudflare, which rejects the default
+                 # "Python-urllib" User-Agent (HTTP 403, error code 1010).
+                 "User-Agent": "genai-testing-assistant/1.0 (+python)", **headers},
+        method="POST",
     )
     start = time.perf_counter()
     try:
@@ -111,6 +115,8 @@ def _groq(system: str, user: str, cfg: dict) -> ProviderResult:
         "max_tokens": cfg.get("max_output_tokens", 600),
         "response_format": {"type": "json_object"},
     }
+    if pcfg.get("reasoning_effort"):
+        payload["reasoning_effort"] = pcfg["reasoning_effort"]
     data, elapsed = _post_json(
         pcfg["base_url"].rstrip("/") + "/chat/completions", payload,
         {"Authorization": f"Bearer {_api_key(pcfg)}"}, cfg.get("timeout_seconds", 60),

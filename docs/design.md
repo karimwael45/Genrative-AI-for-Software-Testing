@@ -21,7 +21,7 @@ flowchart LR
 
 ## Model integration (Person 3)
 
-- **Providers:** free-tier Groq (default, `llama-3.1-8b-instant`), Gemini free tier, or a local Ollama model, behind one interface (`model/providers.py`) with an automatic fallback. No paid APIs. Keys live only in a local `.env`.
+- **Providers:** free-tier Groq (default, open-weights `openai/gpt-oss-20b`), Gemini free tier, or a local Ollama model, behind one interface (`model/providers.py`) with an automatic fallback. No paid APIs. Keys live only in a local `.env`.
 - **Prompt:** the system prompt (`model/prompts/inspect_assist.txt`) requires grounding in observed data, separates observations from assumptions, and asks one clarification question when expected behavior is unknown. The user prompt contains the tester goal, the selected IDs and the selected element records only.
 - **Prompt-injection guard:** page-derived strings are truncated and placed in an `<observed_page_data>` block declared as untrusted data; attempts to close the block from page text are neutralised.
 - **Validation:** inputs must be IDs from the stored inspection (`resolve_elements`). Outputs are parsed as JSON and every cited element ID, in structured fields or free text, is checked against the selected IDs; unknown IDs are flagged, not hidden. Unparseable replies are reported with the raw text.
