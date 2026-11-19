@@ -8,6 +8,8 @@ class AssistRequest(BaseModel):
     inspectionId: str
     elementIds: list[str] = Field(min_length=1)
     goal: str = Field(min_length=1)
+    # Optional tester reply to the model's previous clarification question.
+    clarificationAnswer: str | None = None
 
 class Locator(BaseModel):
     strategy: str
@@ -28,10 +30,35 @@ class Inspection(BaseModel):
     inspectionTimeMs: float | None = None
     elements: list[Element]
 
+class NextAction(BaseModel):
+    description: str = ""
+    elementIds: list[str] = []
+
+class Observation(BaseModel):
+    elementId: str
+    note: str = ""
+
+class Grounding(BaseModel):
+    ok: bool
+    unknownElementIds: list[str] = []
+    referencedElementIds: list[str] = []
+
 class ModelResponse(BaseModel):
+    # Original fields (the UI renders these).
     message: str
     model: str
     inputTokens: int | None = None
     outputTokens: int | None = None
     responseTimeMs: float
     tokenCountsEstimated: bool = False
+    # Optional structured fields added by the model integration (Person 3).
+    provider: str | None = None
+    cached: bool = False
+    summary: str | None = None
+    observations: list[Observation] = []
+    nextAction: NextAction | None = None
+    clarification: str | None = None
+    assumptions: list[str] = []
+    grounding: Grounding | None = None
+    outputValid: bool = True
+    logId: int | None = None

@@ -1,5 +1,33 @@
 allowed_origins:
   - http://localhost:8000
-model: unconfigured
 runner_timeout_seconds: 30
 max_elements: 200
+
+# Model configuration (Person 3). Secrets never go here: API keys are read
+# from environment variables or a local, git-ignored .env file.
+model:
+  # groq | gemini | ollama | mock   (mock = offline, deterministic, for tests only)
+  provider: groq
+  # Used when the main provider fails (network error, rate limit, timeout).
+  # Set to null to disable the fallback.
+  fallback_provider: ollama
+  temperature: 0.2
+  max_output_tokens: 600
+  timeout_seconds: 60
+  # Truncate long page strings before they reach the prompt.
+  max_field_chars: 200
+  providers:
+    groq:
+      model: llama-3.1-8b-instant
+      base_url: https://api.groq.com/openai/v1
+      api_key_env: GROQ_API_KEY
+    gemini:
+      model: gemini-2.0-flash
+      base_url: https://generativelanguage.googleapis.com/v1beta
+      api_key_env: GEMINI_API_KEY
+    ollama:
+      model: llama3.2:3b
+      base_url_env: OLLAMA_BASE_URL
+      base_url: http://localhost:11434
+    mock:
+      model: mock-grounded-v1
