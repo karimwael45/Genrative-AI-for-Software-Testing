@@ -3,28 +3,106 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
   <title>Web Testing Assistant</title>
   <link rel="stylesheet" href="/web/style.css">
   <script src="/web/app.js" defer></script>
 </head>
 <body>
-  <main>
-    <h1>Web Testing Assistant</h1>
-    <form id="inspect">
-      <label>Page URL <input id="url" type="url" required></label>
-      <button>Inspect page</button>
-      <button id="sample" type="button">Load sample</button>
-    </form>
-    <p id="status" role="status"></p>
-    <form id="assist">
-      <fieldset>
-        <legend id="source">Inspected elements</legend>
-        <div id="elements"></div>
-      </fieldset>
-      <p><label>Testing goal <input id="goal" required></label></p>
-      <button id="suggest" disabled>Suggest next step</button>
-    </form>
-    <pre id="result" aria-live="polite"></pre>
+  <main class="shell">
+    <div class="page-heading">
+      <h1>Inspection workspace</h1>
+      <p>Inspect a demo page and use its elements to ask for a testing suggestion.</p>
+    </div>
+
+    <section class="panel inspection-panel" aria-labelledby="inspect-heading">
+      <h2 id="inspect-heading">Inspect a page</h2>
+      <form id="inspect">
+        <label class="field-label" for="url">Approved demo URL</label>
+        <div class="inspect-controls">
+          <input id="url" type="url" spellcheck="false" autocomplete="url" required
+                 placeholder="http://localhost:8000/login">
+          <button id="inspect-button" class="button primary" type="submit">Inspect page</button>
+          <button id="sample" class="button secondary" type="button">Load sample</button>
+        </div>
+      </form>
+      <p id="inspection-status" class="status" role="status" aria-atomic="true"></p>
+    </section>
+
+    <dl class="metrics" aria-label="Inspection summary">
+      <div class="metric">
+        <dt>Elements found</dt>
+        <dd id="element-count">—</dd>
+      </div>
+      <div class="metric">
+        <dt>Locator candidates</dt>
+        <dd id="locator-count">—</dd>
+      </div>
+      <div class="metric">
+        <dt>Inspection time</dt>
+        <dd id="inspection-time">—</dd>
+      </div>
+    </dl>
+
+    <div class="workspace">
+      <section class="panel elements-panel" aria-labelledby="elements-heading">
+        <h2 id="elements-heading">Inspected elements</h2>
+        <div id="snapshot" class="snapshot" hidden>
+          <span id="snapshot-kind" class="source-tag"></span>
+          <span id="source" class="source-url"></span>
+        </div>
+        <div id="element-empty" class="empty-state">
+          <span class="empty-icon" aria-hidden="true"><span class="browser-icon"></span></span>
+          <h3 id="empty-heading">No inspection yet</h3>
+          <p id="empty-text">Inspect a page or load the sample to view elements and locator evidence.</p>
+        </div>
+        <fieldset id="element-picker" hidden>
+          <legend class="visually-hidden">Select inspected elements</legend>
+          <ul id="elements" class="element-list"></ul>
+        </fieldset>
+      </section>
+
+      <section class="panel assistant-panel" aria-labelledby="assist-heading">
+        <div class="section-heading">
+          <h2 id="assist-heading">Testing assistant</h2>
+          <span id="selection-count" class="selection-count">0 selected</span>
+        </div>
+        <form id="assist">
+          <label class="field-label" for="goal">Testing goal</label>
+          <textarea id="goal" rows="3" required
+                    placeholder="Check how the email field handles invalid addresses."></textarea>
+          <p id="selection-hint" class="hint">Run a live inspection to enable suggestions.</p>
+          <button id="suggest" class="button primary" type="submit" aria-describedby="selection-hint" disabled>
+            Suggest next step
+          </button>
+        </form>
+        <p id="assistant-status" class="status" role="status" aria-atomic="true"></p>
+        <section id="result" class="result" aria-labelledby="result-heading" hidden>
+          <h3 id="result-heading">Suggestion</h3>
+          <p id="suggestion-text" class="suggestion"></p>
+          <h4>Model usage</h4>
+          <dl class="usage">
+            <div>
+              <dt>Model</dt>
+              <dd id="model-name"></dd>
+            </div>
+            <div>
+              <dt>Response time</dt>
+              <dd id="response-time"></dd>
+            </div>
+            <div>
+              <dt>Input tokens</dt>
+              <dd id="input-tokens"></dd>
+            </div>
+            <div>
+              <dt>Output tokens</dt>
+              <dd id="output-tokens"></dd>
+            </div>
+          </dl>
+          <p id="token-estimate" class="hint" hidden>Token counts are estimated.</p>
+        </section>
+      </section>
+    </div>
   </main>
 </body>
 </html>
