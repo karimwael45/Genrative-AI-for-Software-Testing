@@ -34,7 +34,7 @@ Configure approved demo origins, model name, timeout and element limit in config
 
 P1: implement runner/inspector.py with headed Playwright and live locator match counts. The entry point validates the initial origin; redirects/navigation/resource restrictions must still be implemented in the inspector. A subprocess alone is not an OS sandbox.
 P2: maintain web/ UI and integrate the backend flow with teammates.
-P3: implement model/model.py and model/providers.py, wire prompts, log actual model/token/time usage and validate output grounding.
+P3: model integration implemented (see "Model setup" below): providers, grounded prompt, structured output, output grounding checks, token/time logging, /api/logs.
 P4: maintain app/, configuration, setup, docs and integrated evidence.
 Shared contracts should be agreed by everyone.
 
@@ -43,3 +43,14 @@ Live inspection and model calls remain explicitly unimplemented. The sample butt
 SQLite tables exist for inspections, logs and versions; only inspection persistence is currently wired. Old data/<UUID>.json snapshots remain readable. The model and provider stubs are not yet connected to each other.
 
 Run checks with `python -m unittest discover -s tests`. Worker protocol: `python -m runner.runner_main` with one JSON request on stdin. See contracts/api.md.
+
+## Model setup (Person 3)
+
+Providers (choose in `config/settings.yaml` → `model.provider`): `groq` (free tier, default), `gemini` (free tier), `ollama` (local, no key), `mock` (offline, tests only, never evidence). `fallback_provider` is tried if the main one fails.
+
+1. Copy `.env.example` to `.env` and paste your free API key (e.g. `GROQ_API_KEY=...` from console.groq.com). `.env` is git-ignored.
+2. For Ollama instead: install Ollama, run `ollama pull llama3.2:3b`, set `provider: ollama`, it is "null" for this phase.
+3. Check the setup without the UI or browser: `python -m model.cli --goal "Check invalid email handling" --ids el-1 el-2`
+4. Save evidence from a real inspection: `python -m model.cli --inspection evidence/inspection_output.json --goal "..." --ids <ids> --save evidence/model_usage_log.json`
+
+

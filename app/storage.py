@@ -1,6 +1,7 @@
 """SQLite inspection snapshots, logs and version records."""
 import json
 import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -31,3 +32,20 @@ def load_inspection(inspection_id: str) -> dict:
     if legacy.exists():
         return json.loads(legacy.read_text(encoding="utf-8"))
     raise FileNotFoundError("Inspection not found")
+
+
+def save_log(entry: dict) -> int:
+    """Store one model-call record (goal, selected IDs, usage, timing) and return its ID."""
+    record = {"loggedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"), **entry}
+    with connect() as db:
+        cursor = db.execute("INSERT INTO logs (payload) VALUES (?)", (json.dumps(record),))
+        return cursor.lastrowid
+
+
+def list_logs(inspection_id: str | None = None) -> list[dict]:
+    with connect() as db:
+        rows = db.execute("SELECT id, payload FROM logs ORDER BY id").fetchall()
+    logs = [{"logId": row[0], **json.loads(row[1])} for row in rows]
+    if inspection_id:
+        logs = [log for log in logs if log.get("inspectionId") == inspection_id]
+    return logs

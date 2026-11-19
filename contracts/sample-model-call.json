@@ -1,17 +1,29 @@
 {
   "request": {
     "inspectionId": "sample",
-    "elementIds": [
-      "el-1"
-    ],
-    "goal": "Check the email field"
+    "elementIds": ["el-1", "el-2"],
+    "goal": "Check how the login form handles an invalid email",
+    "clarificationAnswer": null
   },
   "response": {
-    "message": "Observed el-1 is an email field. Clarify the expected validation behavior.",
+    "message": "The form has an Email textbox (el-1) and a Sign in button (el-2).\n\nNext step: Enter an address without '@' in el-1 and click el-2 [el-1, el-2]\n\nQuestion for you: What should happen after an invalid email is submitted?",
     "model": "synthetic-example",
+    "provider": "synthetic",
     "inputTokens": null,
     "outputTokens": null,
+    "tokenCountsEstimated": false,
     "responseTimeMs": 0,
-    "tokenCountsEstimated": false
+    "cached": false,
+    "summary": "The form has an Email textbox (el-1) and a Sign in button (el-2).",
+    "observations": [
+      {"elementId": "el-1", "note": "textbox labelled Email, type=email"},
+      {"elementId": "el-2", "note": "submit button labelled Sign in"}
+    ],
+    "nextAction": {"description": "Enter an address without '@' in el-1 and click el-2", "elementIds": ["el-1", "el-2"]},
+    "clarification": "What should happen after an invalid email is submitted?",
+    "assumptions": ["The form validates the email format before signing in"],
+    "grounding": {"ok": true, "unknownElementIds": [], "referencedElementIds": ["el-1", "el-2"]},
+    "outputValid": true,
+    "logId": 1
   }
 }
