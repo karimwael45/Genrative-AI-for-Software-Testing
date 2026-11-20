@@ -1,0 +1,23 @@
+%% Approval gates along the full workflow. G0 is enforced in Phase 1; G1-G4 are Phase 2.
+flowchart LR
+  URL["Tester enters URL"] --> G0{{"G0 Target approval<br/>allowlisted origin"}}
+  G0 -->|approved| INSP["Inspection<br/>(stored snapshot)"]
+  G0 -->|refused| STOP0(["400, browser never opens"])
+  INSP --> GEN["Draft test cases<br/>(stored element IDs only)"]
+  GEN --> G1{{"G1 Test plan approval<br/>edit / clarify / approve"}}
+  G1 -->|approved| CODE["Generate POM code<br/>+ syntax and locator checks"]
+  G1 -->|changes| GEN
+  CODE --> G2{{"G2 Code review"}}
+  G2 -->|approved| G3{{"G3 Execution approval<br/>explicit go"}}
+  G2 -->|changes| CODE
+  G3 -->|go| RUN["Run in isolated runner<br/>store outcome + screenshots"]
+  RUN --> RESCAN["Rescan page<br/>diff vs stored inspection"]
+  RESCAN --> REP["Proposed locator repairs<br/>with evidence"]
+  REP --> G4{{"G4 Repair approval<br/>one repair at a time"}}
+  G4 -->|approved| CODE
+  G4 -->|rejected| KEEP(["Keep current code,<br/>flag test"])
+
+  classDef gate fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d
+  classDef phase1 fill:#ede9fe,stroke:#6d28d9,color:#4c1d95
+  class G0,G1,G2,G3,G4 gate
+  class URL,INSP phase1

@@ -1,0 +1,35 @@
+%% Phase 1 data flow: inspect, then ask the model about selected elements.
+sequenceDiagram
+  autonumber
+  actor T as Tester
+  participant UI as Web UI [P2]
+  participant API as FastAPI [P4]
+  participant R as Runner process [P1]
+  participant DB as SQLite [P4]
+  participant M as Model module [P3]
+  participant L as LLM provider
+
+  T->>UI: Enter URL (+ optional scope), click Inspect
+  UI->>API: POST /api/inspect {url, scope}
+  API->>API: G0: origin in allowed_origins?
+  alt origin not allowed
+    API-->>UI: 400 "URL origin is not in the configured allowlist"
+  else allowed
+    API->>R: spawn, stdin {url, scope} (timeout, restricted cwd + env)
+    R->>R: origin check again, open headed Chromium
+    R-->>API: stdout inspection JSON (elements, locators, matchCount, inspectionTimeMs)
+    API->>API: Inspection schema check (unique IDs, matchCount >= 0, max_elements)
+    API->>DB: save_inspection (new UUID + inspectedAt)
+    API-->>UI: inspection {inspectionId, sourceUrl, elements}
+  end
+  T->>UI: Filter / select elements, write goal
+  UI->>API: POST /api/assist {inspectionId, elementIds, goal}
+  API->>DB: load_inspection(inspectionId)
+  API->>M: resolve_elements (IDs must exist in stored inspection)
+  M->>L: grounded prompt (page text marked as untrusted data)
+  L-->>M: JSON reply (summary, nextAction, clarification)
+  M->>M: check_grounding (cited IDs must be selected IDs)
+  M-->>API: reply + model, tokens, responseTimeMs
+  API->>DB: save_log
+  API-->>UI: validated response + usage
+  UI-->>T: Suggestion, model time vs browser time, tokens
