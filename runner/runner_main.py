@@ -21,7 +21,7 @@ def validate_url(url):
 def main():
     try:
         request = json.load(sys.stdin)
-        result = inspect_page(validate_url(request["url"]))
+        result = inspect_page(validate_url(request["url"]), request.get("scope"))
     except Exception as exc:
         print(json.dumps({"error": str(exc)}))
         return 1

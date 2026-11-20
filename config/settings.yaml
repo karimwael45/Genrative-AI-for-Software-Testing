@@ -10,7 +10,9 @@ model:
   provider: groq
   # Used when the main provider fails (network error, rate limit, timeout).
   # Set to null to disable the fallback.
-  fallback_provider: null
+  # Automatic offline fallback keeps the demo and manual tests usable when no
+  # free-tier API key is configured locally.
+  fallback_provider: mock
   temperature: 0.2
   # Reasoning models (gpt-oss) spend part of this budget on hidden reasoning.
   max_output_tokens: 1500
