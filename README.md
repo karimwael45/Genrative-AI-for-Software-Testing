@@ -46,10 +46,10 @@ Run checks with `python -m unittest discover -s tests`. Worker protocol: `python
 
 ## Model setup (Person 3)
 
-Providers (choose in `config/settings.yaml` → `model.provider`): `groq` (free tier, default), `gemini` (free tier), `ollama` (local, no key), `mock` (offline, tests only, never evidence). `fallback_provider` is tried if the main one fails.
+Providers (choose in `config/settings.yaml` → `model.provider`): `groq` (free tier, default), `gemini` (free tier), `ollama` (local, no key), `mock` (offline, tests only, never evidence). If the main provider fails, `model.fallbacks` is tried in order (default `[ollama, mock]`): Ollama is skipped quickly when it is not running, and the mock's replies are labelled `[MOCK ...]`. A fallback answer is flagged with `fallbackUsed` / `fallbackReason` and is never cached.
 
 1. Copy `.env.example` to `.env` and paste your free API key (e.g. `GROQ_API_KEY=...` from console.groq.com). `.env` is git-ignored.
-2. For Ollama instead: install Ollama, run `ollama pull llama3.2:3b`, set `provider: ollama`, it is "null" for this phase.
+2. Local model with Ollama (on a machine that has it, ideally with a GPU): install Ollama, run `ollama pull llama3.2:3b`, then test it alone with `python -m model.cli --provider ollama --goal "..." --ids el-4`. Use `--provider groq` / `--provider mock` the same way. `--save` refuses mock replies.
 3. Check the setup without the UI or browser: `python -m model.cli --goal "Check invalid email handling" --ids el-1 el-2`
 4. Save evidence from a real inspection: `python -m model.cli --inspection evidence/inspection_output.json --goal "..." --ids <ids> --save evidence/model_usage_log.json`
 

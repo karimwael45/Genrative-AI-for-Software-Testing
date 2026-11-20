@@ -22,6 +22,8 @@ PROMPT_DIR = Path(__file__).resolve().parent / "prompts"
 _CACHE: OrderedDict[str, dict] = OrderedDict()
 _CACHE_SIZE = 64
 
+MOCK_NOTICE = "[MOCK reply: offline test provider, not a real model. Not valid evidence.]"
+
 __all__ = ["suggest", "build_user_prompt", "ProviderError"]
 
 
@@ -97,9 +99,14 @@ def _compose_message(reply: dict, grounding: dict) -> str:
 
 
 def suggest(goal: str, source_url: str, elements: list[dict],
-            clarification_answer: str | None = None) -> dict:
-    """Return a grounded suggestion plus model usage (shape of app.schemas.ModelResponse)."""
+            clarification_answer: str | None = None, provider: str | None = None) -> dict:
+    """Return a grounded suggestion plus model usage (shape of app.schemas.ModelResponse).
+
+    `provider` forces one provider with no fallbacks (used to test a single provider).
+    """
     cfg = load_model_config()
+    if provider:
+        cfg = {**cfg, "provider": provider, "fallbacks": [], "fallback_provider": None}
     system = (PROMPT_DIR / "inspect_assist.txt").read_text(encoding="utf-8")
     user = build_user_prompt(goal, source_url, elements, cfg.get("max_field_chars", 200),
                              clarification_answer)
@@ -119,10 +126,18 @@ def suggest(goal: str, source_url: str, elements: list[dict],
         reply = normalize_reply({})
         output_valid, raw = False, result.text[:2000]
     grounding = check_grounding(reply, allowed)
+    fallback_used = bool(result.failed_before)
+
+    message = (_compose_message(reply, grounding) if output_valid
+               else "The model reply could not be parsed as the expected JSON. Raw reply:\n\n" + (raw or ""))
+    if result.provider == "mock":
+        message = MOCK_NOTICE + "\n\n" + message
+    if fallback_used:
+        reasons = " | ".join(r[:200] for r in result.failed_before)
+        message += f"\n\nNote: answered by fallback provider '{result.provider}' because: {reasons}"
 
     response = {
-        "message": _compose_message(reply, grounding) if output_valid
-        else "The model reply could not be parsed as the expected JSON. Raw reply:\n\n" + (raw or ""),
+        "message": message,
         "model": result.model,
         "provider": result.provider,
         "inputTokens": result.input_tokens,
@@ -137,9 +152,13 @@ def suggest(goal: str, source_url: str, elements: list[dict],
         "assumptions": reply["assumptions"],
         "grounding": grounding,
         "outputValid": output_valid,
+        "fallbackUsed": fallback_used,
+        "fallbackReason": " | ".join(result.failed_before) or None,
     }
-    if output_valid:
-        _CACHE[key] = response
+    # Only a reply from the main provider is reused. Store a copy: the caller
+    # adds fields (e.g. logId) to the dict it gets back.
+    if output_valid and not fallback_used:
+        _CACHE[key] = dict(response)
         if len(_CACHE) > _CACHE_SIZE:
             _CACHE.popitem(last=False)
     return response

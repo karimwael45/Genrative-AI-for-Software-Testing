@@ -18,7 +18,7 @@ import os
 import time
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -37,6 +37,8 @@ class ProviderResult:
     output_tokens: int | None
     tokens_estimated: bool
     response_time_ms: float
+    # Providers tried before this one answered, as "name: reason".
+    failed_before: list[str] = field(default_factory=list)
 
 
 # ---------------------------------------------------------------- helpers
@@ -184,7 +186,7 @@ def _mock(system: str, user: str, cfg: dict) -> ProviderResult:
         except json.JSONDecodeError:
             ids = []
     text = json.dumps({
-        "summary": f"Mock summary of {len(ids)} selected element(s).",
+        "summary": f"[MOCK reply, not a real model] Summary of {len(ids)} selected element(s).",
         "observations": [{"elementId": i, "note": "Observed in the stored inspection."} for i in ids],
         "nextAction": {"description": "Mock next action.", "elementIds": ids[:1]},
         "clarification": "Mock clarification: what is the expected behavior?",
@@ -197,20 +199,39 @@ def _mock(system: str, user: str, cfg: dict) -> ProviderResult:
 PROVIDERS = {"groq": _groq, "gemini": _gemini, "ollama": _ollama, "mock": _mock}
 
 
-def complete(system: str, user: str, cfg: dict) -> ProviderResult:
-    """Call the configured provider, then the fallback provider if the first fails."""
-    load_dotenv()
+def provider_order(cfg: dict) -> list[str]:
+    """Main provider first, then each fallback in order (duplicates removed).
+
+    `fallbacks` is a list such as [ollama, mock]; the older single
+    `fallback_provider` key is still accepted.
+    """
     order = [cfg.get("provider", "mock")]
-    fallback = cfg.get("fallback_provider")
-    if fallback and fallback not in order:
-        order.append(fallback)
-    errors = []
-    for name in order:
+    chain = cfg.get("fallbacks")
+    if chain is None and cfg.get("fallback_provider"):
+        chain = [cfg["fallback_provider"]]
+    for name in chain or []:
+        if name and name not in order:
+            order.append(name)
+    return order
+
+
+def complete(system: str, user: str, cfg: dict) -> ProviderResult:
+    """Try the main provider, then every fallback in order until one answers.
+
+    The result records which providers failed first (`failed_before`), so a
+    reply from a fallback is never mistaken for one from the main provider.
+    """
+    load_dotenv()
+    errors: list[str] = []
+    for name in provider_order(cfg):
         if name not in PROVIDERS:
             errors.append(f"{name}: unknown provider")
             continue
         try:
-            return PROVIDERS[name](system, user, cfg)
+            result = PROVIDERS[name](system, user, cfg)
         except ProviderError as exc:
             errors.append(f"{name}: {exc}")
+            continue
+        result.failed_before = errors
+        return result
     raise ProviderError("All model providers failed. " + " | ".join(errors))
