@@ -19,10 +19,28 @@
       <h2 id="inspect-heading">Inspect a page</h2>
       <form id="inspect">
         <label class="field-label" for="url">Approved demo URL</label>
+        <input id="url" type="url" spellcheck="false" autocomplete="url" required
+               placeholder="http://localhost:8000/login">
+        <fieldset id="inspection-scope" class="inspection-scope">
+          <legend>Inspection scope</legend>
+          <fieldset id="scope-types" aria-describedby="type-hint">
+            <legend class="field-label">Element types</legend>
+            <div class="type-options">
+              <label><input type="checkbox" value="button"> Button</label>
+              <label><input type="checkbox" value="link"> Link</label>
+              <label><input type="checkbox" value="input"> Input</label>
+              <label><input type="checkbox" value="textarea"> Textarea</label>
+              <label><input type="checkbox" value="select"> Select</label>
+              <label><input type="checkbox" value="form"> Form</label>
+            </div>
+            <p id="type-hint" class="hint">Leave all unchecked to include every type.</p>
+          </fieldset>
+          <label class="field-label" for="scope-selector">CSS selector (optional)</label>
+          <input id="scope-selector" type="text" spellcheck="false" autocomplete="off" placeholder="#login-form">
+        </fieldset>
         <div class="inspect-controls">
-          <input id="url" type="url" spellcheck="false" autocomplete="url" required
-                 placeholder="http://localhost:8000/login">
           <button id="inspect-button" class="button primary" type="submit">Inspect page</button>
+          <button id="reinspect-button" class="button secondary" type="submit" disabled>Re-inspect</button>
           <button id="sample" class="button secondary" type="button">Load sample</button>
         </div>
       </form>
@@ -78,9 +96,35 @@
         </form>
         <p id="assistant-status" class="status" role="status" aria-atomic="true"></p>
         <section id="result" class="result" aria-labelledby="result-heading" hidden>
-          <h3 id="result-heading">Suggestion</h3>
-          <p id="suggestion-text" class="suggestion"></p>
-          <h4>Model usage</h4>
+          <div class="result-heading">
+            <h3 id="result-heading" tabindex="-1">Suggestion</h3>
+            <span id="provider-badge" class="badge provider-badge"></span>
+          </div>
+          <p id="mock-warning" class="notice mock-notice" hidden>MOCK reply, not a real model</p>
+          <div id="fallback-warning" class="notice fallback-notice" hidden>
+            <h4>Fallback used</h4>
+            <p id="fallback-reason"></p>
+          </div>
+          <div id="grounding-warning" class="notice grounding-notice" role="alert" hidden>
+            <h4>Grounding warning</h4>
+            <p id="grounding-message"></p>
+          </div>
+          <div id="suggestion-blocks" class="suggestion-blocks" hidden></div>
+          <form id="clarification-form" aria-labelledby="clarification-heading" hidden>
+            <h4 id="clarification-heading">Clarification</h4>
+            <p id="clarification-question"></p>
+            <label class="field-label" for="clarification-answer">Your answer</label>
+            <textarea id="clarification-answer" rows="3" aria-describedby="clarification-question" required></textarea>
+            <button id="refine" class="button primary" type="submit" disabled>Refine suggestion</button>
+            <p id="clarification-status" class="status" role="status" aria-atomic="true"></p>
+          </form>
+          <div class="result-heading usage-heading">
+            <h4>Model usage</h4>
+            <div class="usage-tags">
+              <span id="token-estimate" class="badge" title="Token counts are estimated" hidden>Estimated</span>
+              <span id="cached-reply" class="badge" hidden>Cached</span>
+            </div>
+          </div>
           <dl class="usage">
             <div>
               <dt>Model</dt>
@@ -99,7 +143,29 @@
               <dd id="output-tokens"></dd>
             </div>
           </dl>
-          <p id="token-estimate" class="hint" hidden>Token counts are estimated.</p>
+          <details id="call-log" class="call-log">
+            <summary>Call log</summary>
+            <p id="log-status" class="status" role="status" aria-atomic="true"></p>
+            <div id="log-content" hidden>
+              <p class="hint">Average fresh response time <strong id="log-average"></strong></p>
+              <div class="log-scroll" role="region" aria-label="Call log table" tabindex="0">
+                <table>
+                  <caption class="visually-hidden">Up to 10 recent model calls for this inspection</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Time</th>
+                      <th scope="col">Provider</th>
+                      <th scope="col">Model</th>
+                      <th scope="col">Response time</th>
+                      <th scope="col">Input tokens</th>
+                      <th scope="col">Output tokens</th>
+                    </tr>
+                  </thead>
+                  <tbody id="log-rows"></tbody>
+                </table>
+              </div>
+            </div>
+          </details>
         </section>
       </section>
     </div>

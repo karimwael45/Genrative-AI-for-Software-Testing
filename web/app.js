@@ -3,12 +3,21 @@ const urlField = byId("url");
 const goalField = byId("goal");
 const elements = byId("elements");
 const inspectButton = byId("inspect-button");
+const reinspectButton = byId("reinspect-button");
 const sampleButton = byId("sample");
+const scopeTypes = byId("scope-types");
+const scopeSelector = byId("scope-selector");
 const suggestButton = byId("suggest");
+const clarificationForm = byId("clarification-form");
+const answerField = byId("clarification-answer");
+const refineButton = byId("refine");
+const callLog = byId("call-log");
 const number = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+const logTime = new Intl.DateTimeFormat(undefined, { dateStyle: "short", timeStyle: "medium" });
 
 let liveInspectionId = null;
 let pending = null;
+let suggestionRequest = null;
 
 function element(tag, text, className) {
   const node = document.createElement(tag);
@@ -19,6 +28,10 @@ function element(tag, text, className) {
 
 function formatTime(ms) {
   return Number.isFinite(ms) ? number.format(ms) + " ms" : "—";
+}
+
+function formatTokens(count) {
+  return count == null ? "Unavailable" : number.format(count);
 }
 
 function selectedIds() {
@@ -39,11 +52,17 @@ function updateControls() {
   selection.dataset.active = count > 0;
 
   inspectButton.disabled = sampleButton.disabled = Boolean(pending);
+  reinspectButton.disabled = Boolean(pending) || !liveInspectionId;
+  byId("inspection-scope").disabled = Boolean(pending);
   urlField.readOnly = goalField.readOnly = byId("element-picker").disabled = Boolean(pending);
+  answerField.readOnly = Boolean(pending);
   suggestButton.disabled = Boolean(pending) || !liveInspectionId || count === 0 || !hasGoal;
+  refineButton.disabled = Boolean(pending) || !suggestionRequest || clarificationForm.hidden || !answerField.value.trim();
   inspectButton.textContent = pending === "inspect" ? "Inspecting…" : "Inspect page";
+  reinspectButton.textContent = pending === "reinspect" ? "Re-inspecting…" : "Re-inspect";
   sampleButton.textContent = pending === "sample" ? "Loading sample…" : "Load sample";
   suggestButton.textContent = pending === "assist" ? "Requesting suggestion…" : "Suggest next step";
+  refineButton.textContent = pending === "refine" ? "Refining…" : "Refine suggestion";
 
   let hint = "";
   if (!liveInspectionId) hint = "Run a live inspection to enable suggestions.";
@@ -141,6 +160,7 @@ function renderElement(item, index) {
   const name = item.label || "Unlabeled " + item.role;
   const entry = element("li");
   const row = element("div", null, "element-row");
+  row.dataset.elementId = item.id;
   const choice = element("label", null, "element-choice");
   const checkbox = element("input");
   checkbox.type = "checkbox";
@@ -166,9 +186,20 @@ function renderElement(item, index) {
   return entry;
 }
 
+function highlightCitedRows(ids) {
+  for (const row of elements.querySelectorAll(".element-row")) {
+    row.classList.toggle("is-cited", ids.has(row.dataset.elementId));
+  }
+}
+
 function clearSuggestion() {
+  suggestionRequest = null;
   byId("result").hidden = true;
+  clarificationForm.hidden = true;
+  answerField.value = "";
+  highlightCitedRows(new Set());
   showStatus("assistant-status");
+  showStatus("clarification-status");
 }
 
 function showInspection(data, sample) {
@@ -195,33 +226,154 @@ function showInspection(data, sample) {
   clearSuggestion();
 }
 
-function loadInspection(url) {
-  const sample = url === undefined;
-  return runTask(sample ? "sample" : "inspect", "inspection-status",
-    sample ? "Loading sample…" : "Inspecting page…", async () => {
-      const data = sample
-        ? await readJson("/web/sample-inspection.json")
-        : await readJson("/api/inspect", { url });
-      showInspection(data, sample);
-      showStatus("inspection-status", sample ? "Sample inspection loaded." : "Inspection complete.", "success");
-    });
+function loadInspection(task, payload) {
+  const sample = task === "sample";
+  const repeat = task === "reinspect";
+  const waitingMessage = sample ? "Loading sample…" : repeat ? "Re-inspecting page…" : "Inspecting page…";
+  const successMessage = sample ? "Sample inspection loaded." : repeat ? "Re-inspection complete." : "Inspection complete.";
+  return runTask(task, "inspection-status", waitingMessage, async () => {
+    const data = sample
+      ? await readJson("/web/sample-inspection.json")
+      : await readJson("/api/inspect", payload);
+    showInspection(data, sample);
+    showStatus("inspection-status", successMessage, "success");
+  });
 }
 
-function showSuggestion(data) {
+function resultBlock(heading, ...content) {
+  const block = element("div", null, "result-block");
+  block.append(element("h4", heading), ...content);
+  return block;
+}
+
+function resultList(items) {
+  const list = element("ul");
+  for (const item of items) list.append(item);
+  return list;
+}
+
+function showSuggestion(data, request) {
   if (typeof data.message !== "string" || typeof data.model !== "string") {
     throw new Error("The server returned an incomplete suggestion.");
   }
-  byId("suggestion-text").textContent = data.message;
+
+  const blocks = [];
+  const summary = data.summary?.trim();
+  const observations = data.observations ?? [];
+  const action = data.nextAction?.description?.trim();
+  const actionIds = data.nextAction?.elementIds ?? [];
+  const assumptions = (data.assumptions ?? []).filter((assumption) => assumption.trim());
+  const question = data.clarification?.trim();
+
+  if (summary) blocks.push(resultBlock("Summary", element("p", summary)));
+  if (observations.length) {
+    const items = observations.map(({ elementId, note }) => {
+      const item = element("li");
+      item.append(element("code", elementId));
+      if (note) item.append(element("span", " — " + note));
+      return item;
+    });
+    blocks.push(resultBlock("Observations", resultList(items)));
+  }
+  if (action || actionIds.length) {
+    const block = resultBlock("Next action");
+    if (action) block.append(element("p", action));
+    if (actionIds.length) block.append(element("p", "Element IDs: " + actionIds.join(", "), "citation-text"));
+    blocks.push(block);
+  }
+  if (assumptions.length) {
+    blocks.push(resultBlock("Assumptions", resultList(assumptions.map((text) => element("li", text)))));
+  }
+  if (data.message.trim() && (data.outputValid === false || (!blocks.length && !question))) {
+    blocks.push(resultBlock("Model reply", element("p", data.message)));
+  }
+
+  const citedIds = new Set([
+    ...(data.grounding?.referencedElementIds ?? []),
+    ...observations.map((observation) => observation.elementId),
+    ...actionIds,
+  ]);
+  const selected = new Set(request.elementIds);
+  const citedSelectedIds = new Set([...citedIds].filter((id) => selected.has(id)));
+  if (citedSelectedIds.size) {
+    blocks.push(element("p", "Cited elements: " + [...citedSelectedIds].join(", "), "citation-text"));
+  }
+  highlightCitedRows(citedSelectedIds);
+  byId("suggestion-blocks").replaceChildren(...blocks);
+  byId("suggestion-blocks").hidden = !blocks.length;
+
+  const unknownIds = data.grounding?.unknownElementIds ?? [];
+  byId("grounding-warning").hidden = data.grounding?.ok !== false && !unknownIds.length;
+  byId("grounding-message").textContent = unknownIds.length
+    ? "The model cited elements that were not selected: " + unknownIds.join(", ")
+    : "The grounding check flagged the model’s citations.";
+  byId("provider-badge").textContent = [data.provider, data.model].filter(Boolean).join(" · ");
+  byId("mock-warning").hidden = data.provider !== "mock";
+  byId("fallback-warning").hidden = !data.fallbackUsed;
+  byId("fallback-reason").textContent = data.fallbackReason ?? "";
+
+  byId("clarification-question").textContent = question ?? "";
+  clarificationForm.hidden = !question;
+  answerField.value = "";
+  showStatus("clarification-status");
+
   byId("model-name").textContent = data.model;
   byId("response-time").textContent = formatTime(data.responseTimeMs);
-  byId("input-tokens").textContent = data.inputTokens == null ? "Unavailable" : number.format(data.inputTokens);
-  byId("output-tokens").textContent = data.outputTokens == null ? "Unavailable" : number.format(data.outputTokens);
-  const hasTokenCounts = data.inputTokens != null || data.outputTokens != null;
-  byId("token-estimate").hidden = !data.tokenCountsEstimated || !hasTokenCounts;
+  byId("input-tokens").textContent = formatTokens(data.inputTokens);
+  byId("output-tokens").textContent = formatTokens(data.outputTokens);
+  byId("token-estimate").hidden = !data.tokenCountsEstimated;
+  byId("cached-reply").hidden = !data.cached;
+  suggestionRequest = request;
   byId("result").hidden = false;
 }
 
-sampleButton.addEventListener("click", () => loadInspection());
+async function loadCallLog() {
+  const request = suggestionRequest;
+  if (!request) return;
+
+  byId("log-content").hidden = true;
+  showStatus("log-status", "Loading call log…");
+  try {
+    const data = await readJson("/api/logs?inspectionId=" + encodeURIComponent(request.inspectionId));
+    if (suggestionRequest !== request) return;
+    const rows = data.calls.slice(-10).reverse().map((call) => {
+      const time = Date.parse(call.loggedAt);
+      const row = element("tr");
+      const responseTime = formatTime(call.responseTimeMs);
+      row.append(
+        element("td", Number.isFinite(time) ? logTime.format(time) : "—"),
+        element("td", call.provider ?? "—"),
+        element("td", call.model ?? "—"),
+        element("td", call.cached ? responseTime + " (cached)" : responseTime),
+        element("td", formatTokens(call.inputTokens)),
+        element("td", formatTokens(call.outputTokens)),
+      );
+      return row;
+    });
+    byId("log-rows").replaceChildren(...rows);
+    byId("log-average").textContent = formatTime(data.averageResponseTimeMs);
+    byId("log-content").hidden = !rows.length;
+    showStatus("log-status", rows.length ? "" : "No calls recorded for this inspection.");
+  } catch {
+    if (suggestionRequest === request) showStatus("log-status", "Could not load the call log.", "error");
+  }
+}
+
+function requestSuggestion(payload, refining = false) {
+  return runTask(
+    refining ? "refine" : "assist",
+    refining ? "clarification-status" : "assistant-status",
+    refining ? "Refining suggestion…" : "Waiting for the model…",
+    async () => {
+      showSuggestion(await readJson("/api/assist", payload), payload);
+      showStatus("assistant-status", refining ? "Refined suggestion ready." : "Suggestion ready.", "success");
+      if (refining) byId("result-heading").focus();
+      if (callLog.open) loadCallLog();
+    },
+  );
+}
+
+sampleButton.addEventListener("click", () => loadInspection("sample"));
 
 urlField.addEventListener("input", () => urlField.setCustomValidity(""));
 byId("inspect").addEventListener("submit", (event) => {
@@ -232,7 +384,12 @@ byId("inspect").addEventListener("submit", (event) => {
     urlField.reportValidity();
     return;
   }
-  loadInspection(url);
+  const scope = {
+    types: Array.from(scopeTypes.querySelectorAll("input:checked"), (checkbox) => checkbox.value),
+    selector: scopeSelector.value.trim() || null,
+  };
+  const task = event.submitter === reinspectButton ? "reinspect" : "inspect";
+  loadInspection(task, { url, scope });
 });
 
 function updateSelection() {
@@ -252,10 +409,18 @@ byId("assist").addEventListener("submit", (event) => {
     goal: goalField.value.trim(),
   };
   clearSuggestion();
-  runTask("assist", "assistant-status", "Waiting for the model…", async () => {
-    showSuggestion(await readJson("/api/assist", payload));
-    showStatus("assistant-status", "Suggestion ready.", "success");
-  });
+  requestSuggestion(payload);
+});
+
+answerField.addEventListener("input", updateControls);
+clarificationForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (refineButton.disabled) return;
+  requestSuggestion({ ...suggestionRequest, clarificationAnswer: answerField.value }, true);
+});
+
+callLog.addEventListener("toggle", () => {
+  if (callLog.open) loadCallLog();
 });
 
 updateControls();
