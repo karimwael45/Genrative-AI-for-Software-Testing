@@ -8,3 +8,10 @@ GET /api/logs[?inspectionId=...] returns {calls, freshCalls, averageResponseTime
 Errors use a non-2xx status and {"error":"message"}. Request validation uses 422; missing inspections 404; timeout 504; model stub 501; model provider unavailable or rate limited 503.
 The worker accepts one JSON object with url (and optional scope) on stdin and emits one inspection or error JSON object on stdout. Worker errors exit nonzero.
 Canonical field models are in app/schemas.py. Samples are synthetic, not demo evidence.
+
+## Inspection fields (final naming: camelCase)
+- Inspection: inspectionId, sourceUrl, inspectedAt, scope, inspectionTimeMs (browser time), elements.
+- Element (required): id, role, label, attributes, candidateLocators. Optional: tag, labelSource (e.g. "aria-label", "label[for]", "placeholder"), text.
+- Locator: strategy, value, optional name, matchCount (>= 0, measured on the live page), unique. If the worker omits unique, the backend sets it to matchCount == 1.
+- Element IDs must be unique within an inspection; worker output with duplicate IDs or a negative matchCount is rejected with 400 and not stored.
+- Fields not listed here are dropped before storage. Agree on new fields in this file and app/schemas.py first.

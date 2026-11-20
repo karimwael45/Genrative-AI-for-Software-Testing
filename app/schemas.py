@@ -1,5 +1,9 @@
-"""Shared API contract models."""
-from pydantic import BaseModel, Field
+"""Shared API contract models.
+
+Field names are camelCase (final team naming). Unknown fields sent by the
+runner are dropped on validation, so new fields must be added here first.
+"""
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 class Scope(BaseModel):
     # Optional inspection refinement: a CSS region and/or element types.
@@ -21,7 +25,15 @@ class Locator(BaseModel):
     strategy: str
     value: str
     name: str | None = None
-    matchCount: int | None = None
+    matchCount: int | None = Field(default=None, ge=0)
+    # True when the locator matches exactly one element on the live page.
+    unique: bool | None = None
+
+    @model_validator(mode="after")
+    def derive_unique(self):
+        if self.unique is None and self.matchCount is not None:
+            self.unique = self.matchCount == 1
+        return self
 
 class Element(BaseModel):
     id: str
@@ -29,6 +41,10 @@ class Element(BaseModel):
     label: str
     attributes: dict
     candidateLocators: list[Locator]
+    # Optional observed details (sent by the runner when available).
+    tag: str | None = None
+    labelSource: str | None = None
+    text: str | None = None
 
 class Inspection(BaseModel):
     inspectionId: str | None = None
@@ -37,6 +53,15 @@ class Inspection(BaseModel):
     scope: Scope | None = None
     inspectionTimeMs: float | None = None
     elements: list[Element]
+
+    @field_validator("elements")
+    @classmethod
+    def unique_element_ids(cls, elements):
+        ids = [element.id for element in elements]
+        duplicates = sorted({i for i in ids if ids.count(i) > 1})
+        if duplicates:
+            raise ValueError(f"Duplicate element IDs: {', '.join(duplicates)}")
+        return elements
 
 class NextAction(BaseModel):
     description: str = ""
