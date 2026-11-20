@@ -1,21 +1,28 @@
 {
   "inspectionId": "sample",
   "sourceUrl": "http://localhost:8000/login",
+  "inspectedAt": "2026-11-20T14:05:11+00:00",
   "inspectionTimeMs": null,
   "elements": [
     {
       "id": "el-1",
       "role": "textbox",
+      "tag": "input",
       "label": "Email",
+      "labelSource": "label[for]",
+      "text": "",
       "attributes": {"id": "email", "type": "email"},
-      "candidateLocators": [{"strategy": "label", "value": "Email", "matchCount": null}]
+      "candidateLocators": [{"strategy": "label", "value": "Email", "matchCount": null, "unique": null}]
     },
     {
       "id": "el-2",
       "role": "button",
+      "tag": "button",
       "label": "Sign in",
+      "labelSource": "text",
+      "text": "Sign in",
       "attributes": {"type": "submit"},
-      "candidateLocators": [{"strategy": "role", "value": "button", "name": "Sign in", "matchCount": null}]
+      "candidateLocators": [{"strategy": "role", "value": "button", "name": "Sign in", "matchCount": null, "unique": null}]
     }
   ]
 }

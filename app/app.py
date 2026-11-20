@@ -27,12 +27,23 @@ def index():
 @app.post("/api/inspect")
 def inspect(body: InspectRequest):
     try:
-        snapshot = Inspection.model_validate(run_inspection(body.url)).model_dump(exclude_none=True)
+        scope = body.scope.model_dump() if body.scope else None
+        payload = run_inspection(body.url, scope)
+        payload.setdefault("scope", scope)
+        snapshot = Inspection.model_validate(payload).model_dump(exclude_none=True)
         return save_inspection(snapshot)
     except subprocess.TimeoutExpired:
         return JSONResponse(status_code=504, content={"error": "Inspection timed out"})
     except ValueError as exc:
         return JSONResponse(status_code=400, content={"error": str(exc)})
+
+@app.get("/api/inspections/{inspection_id}")
+def get_inspection(inspection_id: str):
+    """Return a stored inspection (reused, the runner is not started again)."""
+    try:
+        return load_inspection(inspection_id)
+    except (FileNotFoundError, ValueError):
+        return JSONResponse(status_code=404, content={"error": "Inspection not found"})
 
 @app.post("/api/assist")
 def assist(body: AssistRequest):
