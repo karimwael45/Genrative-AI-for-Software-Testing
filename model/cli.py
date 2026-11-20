@@ -22,6 +22,23 @@ from model.validation import resolve_elements
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def read_json(path) -> object:
+    """Read JSON written by any tool. 'utf-8-sig' accepts the BOM that Windows
+    PowerShell adds when output is redirected with '>'."""
+    return json.loads(Path(path).read_text(encoding="utf-8-sig"))
+
+
+def append_log(path, record: dict) -> None:
+    """Append one call record to a JSON list file (created if missing)."""
+    path = Path(path)
+    log = read_json(path) if path.exists() else []
+    if not isinstance(log, list):
+        raise ValueError(f"{path} is not a JSON list of call records. Move or delete it, "
+                         "then run again so a fresh log is created.")
+    log.append(record)
+    path.write_text(json.dumps(log, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--inspection", default=str(ROOT / "contracts/sample-inspection.json"))
@@ -31,7 +48,7 @@ def main() -> int:
     parser.add_argument("--save", help="append the call record to this JSON file")
     args = parser.parse_args()
 
-    snapshot = json.loads(Path(args.inspection).read_text(encoding="utf-8"))
+    snapshot = read_json(args.inspection)
     try:
         elements = resolve_elements(snapshot, args.ids)
         result = suggest(args.goal, snapshot["sourceUrl"], elements, args.answer)
@@ -58,11 +75,12 @@ def main() -> int:
                       "host": f"{platform.system()} {platform.release()}, Python {platform.python_version()}"},
             **result,
         }
-        path = Path(args.save)
-        log = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
-        log.append(record)
-        path.write_text(json.dumps(log, indent=2, ensure_ascii=False), encoding="utf-8")
-        print(f"\nSaved to {path}")
+        try:
+            append_log(args.save, record)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+        print(f"\nSaved to {args.save}")
     return 0
 
 
