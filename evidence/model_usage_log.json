@@ -1,0 +1,32 @@
+{
+  "provider": "mock",
+  "model": "mock-grounded-v1",
+  "setup": "Offline deterministic fallback configured in config/settings.yaml",
+  "token_counts": "estimated",
+  "calls": [
+    {
+      "logId": 1,
+      "inspectionId": "48d26d06-6149-4203-9b6d-6d1816fe3336",
+      "model": "mock-grounded-v1",
+      "provider": "mock",
+      "inputTokens": 653,
+      "outputTokens": 76,
+      "tokenCountsEstimated": true,
+      "responseTimeMs": 0.1,
+      "groundingOk": true
+    },
+    {
+      "logId": 2,
+      "inspectionId": "58208eb8-31d0-4a72-84e4-800a1378a3ea",
+      "model": "mock-grounded-v1",
+      "provider": "mock",
+      "inputTokens": 832,
+      "outputTokens": 94,
+      "tokenCountsEstimated": true,
+      "responseTimeMs": 0.0,
+      "groundingOk": true
+    }
+  ],
+  "freshCalls": 2,
+  "averageResponseTimeMs": 0.1
+}
