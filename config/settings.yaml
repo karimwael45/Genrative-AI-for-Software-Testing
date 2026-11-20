@@ -8,11 +8,13 @@ max_elements: 200
 model:
   # groq | gemini | ollama | mock   (mock = offline, deterministic, for tests only)
   provider: groq
-  # Used when the main provider fails (network error, rate limit, timeout).
-  # Set to null to disable the fallback.
-  # Automatic offline fallback keeps the demo and manual tests usable when no
-  # free-tier API key is configured locally.
-  fallback_provider: mock
+  # Tried in order when the main provider fails (network error, rate limit,
+  # timeout, missing key). Use [] to disable.
+  #   ollama = local open-source model; needs Ollama running on this machine and
+  #            is skipped quickly when it is not.
+  #   mock   = offline last resort. Its replies are labelled "[MOCK ...]" and are
+  #            never valid evidence (model.cli refuses to save them).
+  fallbacks: [ollama, mock]
   temperature: 0.2
   # Reasoning models (gpt-oss) spend part of this budget on hidden reasoning.
   max_output_tokens: 1500

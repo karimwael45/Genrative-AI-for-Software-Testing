@@ -20,7 +20,7 @@ Configured in `config/settings.yaml` → `model` (details in the model integrati
 |---|---|
 | Default provider | Groq free tier, open-weights model `openai/gpt-oss-20b`, `reasoning_effort: low` |
 | Alternatives | Gemini free tier `gemini-2.0-flash`; local Ollama `llama3.2:3b` (runs on the machine above, no key, no network) |
-| Fallback provider | `null` (disabled by default; can be set to another provider) |
+| Fallback chain | `fallbacks: [ollama, mock]`: local Ollama first (skipped quickly if not running), then a labelled offline mock. Mock replies are never valid evidence. `[]` disables fallbacks. |
 | Temperature | 0.2 |
 | Max output tokens | 1500 (part is spent on hidden reasoning by gpt-oss) |
 | Model timeout | 60 s |

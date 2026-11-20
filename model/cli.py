@@ -46,12 +46,16 @@ def main() -> int:
     parser.add_argument("--ids", nargs="+", required=True, help="selected element IDs")
     parser.add_argument("--answer", help="answer to a previous clarification question")
     parser.add_argument("--save", help="append the call record to this JSON file")
+    parser.add_argument("--provider", choices=["groq", "gemini", "ollama", "mock"],
+                        help="use only this provider, with no fallbacks (to test one provider)")
+    parser.add_argument("--allow-mock", action="store_true",
+                        help="allow --save with a mock reply (never use for evidence)")
     args = parser.parse_args()
 
     snapshot = read_json(args.inspection)
     try:
         elements = resolve_elements(snapshot, args.ids)
-        result = suggest(args.goal, snapshot["sourceUrl"], elements, args.answer)
+        result = suggest(args.goal, snapshot["sourceUrl"], elements, args.answer, provider=args.provider)
     except (ValueError, ProviderError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
@@ -63,8 +67,15 @@ def main() -> int:
     print(f"tokens in/out  : {result['inputTokens']} / {result['outputTokens']}{est}")
     print(f"model time     : {result['responseTimeMs']} ms{' (cached result)' if result['cached'] else ''}")
     print(f"grounded       : {result['grounding']['ok']} {result['grounding']['unknownElementIds'] or ''}")
+    if result.get("fallbackUsed"):
+        print(f"FALLBACK USED  : {result['fallbackReason']}")
 
     if args.save:
+        if result["provider"] == "mock" and not args.allow_mock:
+            print("Error: not saving a MOCK reply as a usage record (it is not real model evidence). "
+                  "Fix the provider (key / Ollama running) or pass --allow-mock for a scratch file.",
+                  file=sys.stderr)
+            return 1
         cfg = load_model_config()
         record = {
             "loggedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),

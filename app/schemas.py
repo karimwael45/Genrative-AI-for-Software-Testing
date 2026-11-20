@@ -94,4 +94,7 @@ class ModelResponse(BaseModel):
     assumptions: list[str] = []
     grounding: Grounding | None = None
     outputValid: bool = True
+    # True when the main provider failed and a fallback (e.g. ollama, mock) answered.
+    fallbackUsed: bool = False
+    fallbackReason: str | None = None
     logId: int | None = None
