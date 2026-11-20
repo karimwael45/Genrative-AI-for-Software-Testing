@@ -33,6 +33,7 @@ class Element(BaseModel):
 class Inspection(BaseModel):
     inspectionId: str | None = None
     sourceUrl: str
+    inspectedAt: str | None = None
     scope: Scope | None = None
     inspectionTimeMs: float | None = None
     elements: list[Element]

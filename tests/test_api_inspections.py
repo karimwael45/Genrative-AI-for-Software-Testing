@@ -24,7 +24,7 @@ RUNNER_OUTPUT = {
 @unittest.skipIf(TestClient is None, "fastapi test client needs httpx")
 class InspectionApiTests(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.tmp = tempfile.TemporaryDirectory()
         self.patch = mock.patch.object(storage, "DATA_DIR", Path(self.tmp.name))
         self.patch.start()
         from app.app import app
