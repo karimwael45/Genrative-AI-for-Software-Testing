@@ -1,8 +1,14 @@
 """Shared API contract models."""
 from pydantic import BaseModel, Field
 
+class Scope(BaseModel):
+    # Optional inspection refinement: a CSS region and/or element types.
+    selector: str | None = None
+    types: list[str] = []
+
 class InspectRequest(BaseModel):
     url: str = Field(min_length=1)
+    scope: Scope | None = None
 
 class AssistRequest(BaseModel):
     inspectionId: str
@@ -27,6 +33,7 @@ class Element(BaseModel):
 class Inspection(BaseModel):
     inspectionId: str | None = None
     sourceUrl: str
+    scope: Scope | None = None
     inspectionTimeMs: float | None = None
     elements: list[Element]
 

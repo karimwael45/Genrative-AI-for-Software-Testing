@@ -7,11 +7,11 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def run_inspection(url: str) -> dict:
+def run_inspection(url: str, scope: dict | None = None) -> dict:
     settings = yaml.safe_load((ROOT / "config/settings.yaml").read_text())
     result = subprocess.run(
         [sys.executable, "-m", "runner.runner_main"],
-        input=json.dumps({"url": url}), text=True, capture_output=True,
+        input=json.dumps({"url": url, "scope": scope}), text=True, capture_output=True,
         cwd=ROOT, timeout=settings["runner_timeout_seconds"],
     )
     payload = json.loads(result.stdout)
